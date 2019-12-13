@@ -1,0 +1,53 @@
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <sys/select.h>
+#include <sys/time.h> 
+
+int COUNTER=0;
+int fildes[2];
+
+void beep(){
+write(fildes[1],"\nBEEP\a\n",8);
+}
+void pre_exit(){
+write(fildes[1],"EXIT",4);
+}
+int main(){
+
+fd_set rfds;
+int retval;
+FD_ZERO(&rfds);
+FD_SET(fildes[1], &rfds); 
+if (pipe(fildes) == -1)
+{
+perror("pipe");
+exit(EXIT_FAILURE);
+}
+char buf[10];
+
+signal(SIGINT,beep);
+signal(SIGQUIT,pre_exit);
+retval = select(1, &rfds, NULL, NULL, NULL);
+while(1){
+
+if (retval){
+++COUNTER;
+read(fildes[0],buf,8);
+if(buf[0]!='E'){
+write(STDIN_FILENO,buf,8);
+}else{
+buf[4]=COUNTER;
+write(STDIN_FILENO,buf,8);
+}
+}
+else if(retval==-1){
+
+exit(-1);
+}
+
+sleep(1);
+}
+
